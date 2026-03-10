@@ -460,8 +460,9 @@ function jsonToGrid(bpJson){
     return grid;
 }
 
-function gaussianWeight(dx, dy, sigma) {
-    return Math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma));
+function gaussianWeight(dx, dy, sigma) { 
+    let val = Math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma)); // this fucker returns negative values sometimes
+    return Math.max(0, val);
 }
 
 function waitForNextFrame() {
