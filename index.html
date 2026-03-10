@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<head>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+
+<style>
+    :root {
+        color-scheme: dark;
+        --bg: #0f172a;
+        --bg-accent: #111827;
+        --panel: rgba(15, 23, 42, 0.78);
+        --panel-border: rgba(148, 163, 184, 0.2);
+        --text: #e5eefc;
+        --muted: #94a3b8;
+        --primary: #38bdf8;
+        --primary-strong: #0ea5e9;
+        --success: #22c55e;
+        --shadow: 0 24px 60px rgba(2, 8, 23, 0.45);
+        --radius: 20px;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 40px 20px;
+        font-family: Inter, "Segoe UI", Roboto, sans-serif;
+        color: var(--text);
+        background:
+            radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 30%),
+            linear-gradient(180deg, #020617 0%, var(--bg) 45%, #111827 100%);
+    }
+
+    .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+    }
+
+    .hero,
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(16px);
+    }
+
+    .hero {
+        padding: 32px;
+    }
+
+    .hero h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.05;
+    }
+
+    .hero p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    .content {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+    }
+
+    .panel {
+        padding: 24px;
+    }
+
+    .panel h2 {
+        margin: 0 0 18px;
+        font-size: 1.15rem;
+    }
+
+    .field,
+    .setting {
+        display: grid;
+        gap: 10px;
+    }
+
+    .field + .field,
+    .field + .setting,
+    .setting + .setting,
+    .setting + .field {
+        margin-top: 18px;
+    }
+
+    label {
+        font-size: 0.95rem;
+        color: #dbeafe;
+    }
+
+    .hint,
+    .notice {
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.92);
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+        border-color: rgba(56, 189, 248, 0.8);
+        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+        transform: translateY(-1px);
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: var(--primary);
+    }
+
+    .range-header,
+    .toggle-row,
+    .actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .value-badge {
+        min-width: 42px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        text-align: center;
+        font-weight: 600;
+        background: rgba(56, 189, 248, 0.12);
+        color: #bae6fd;
+    }
+
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+    }
+
+    button {
+        width: 100%;
+        padding: 14px 18px;
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+        color: white;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        box-shadow: 0 16px 30px rgba(14, 165, 233, 0.28);
+    }
+
+    button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 22px 34px rgba(14, 165, 233, 0.34);
+    }
+
+    button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+    }
+
+    .canvas-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .canvas-frame {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        overflow: hidden;
+        background:
+            linear-gradient(45deg, rgba(30, 41, 59, 0.9) 25%, transparent 25%),
+            linear-gradient(-45deg, rgba(30, 41, 59, 0.9) 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, rgba(30, 41, 59, 0.9) 75%),
+            linear-gradient(-45deg, transparent 75%, rgba(30, 41, 59, 0.9) 75%);
+        background-size: 28px 28px;
+        background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    #canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    #download_link {
+        display: none;
+        width: fit-content;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: rgba(34, 197, 94, 0.14);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #bbf7d0;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    #download_link:hover {
+        background: rgba(34, 197, 94, 0.2);
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 840px) {
+        body {
+            padding: 20px 14px;
+        }
+
+        .hero,
+        .panel {
+            padding: 20px;
+        }
+
+        .content {
+            grid-template-columns: 1fr;
+        }
+    }
+
+</style>
+</head>
+<body>
+<div class="page">
+    <section class="hero">
+        <h1>Factorio Blueprint Entropy Map</h1>
+        <p>Paste a Factorio blueprint string, tune the entropy settings, and generate a heatmap you can export as a PNG for overlay work.</p>
+    </section>
+
+    <section class="content">
+        <div class="panel controls">
+            <h2>Blueprint Input</h2>
+
+            <div class="field">
+                <label for="bpInput">Blueprint string</label>
+                <input type="text" id="bpInput" placeholder="Paste blueprint string here">
+                <div class="hint">Large blueprints can take a little time to render, especially with a wide context window.</div>
+            </div>
+
+            <div class="field">
+                <h2>Settings</h2>
+
+                <div class="setting">
+                    <div class="range-header">
+                        <label for="scaleSlider">Color Scale</label>
+                        <span class="value-badge" id="scaleValue">5</span>
+                    </div>
+                    <input type="range" id="scaleSlider" min="1" max="10" value="5">
+                </div>
+
+                <div class="setting">
+                    <div class="range-header">
+                        <label for="windowSlider">Context Window Radius</label>
+                        <span class="value-badge" id="windowValue">5</span>
+                    </div>
+                    <input type="range" id="windowSlider" min="1" max="50" value="5">
+                </div>
+
+                <div class="setting toggle-row">
+                    <label for="gaussCheckbox">Use Gaussian Weighting</label>
+                    <input type="checkbox" id="gaussCheckbox" checked>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="processBtn" onclick="process()">Process Blueprint</button>
+            </div>
+        </div>
+
+        <div class="panel canvas-shell">
+            <h2>Entropy Map</h2>
+            <div class="canvas-frame" id="canvasFrame">
+                <canvas id="canvas" width="800" height="600"></canvas>
+            </div>
+            <a id="download_link" href="#" download="entropy_map.png">Download Entropy Map</a>
+            <div class="notice">Note: this tool renders the entropy heatmap only, not the original blueprint. Overlay the exported image in your editor of choice.</div>
+        </div>
+    </section>
+</div>
+    
+</body>
+
+<script>
+
+function updateSettings() {
+    const scale = document.getElementById("scaleSlider").value;
+    const windowRadius = document.getElementById("windowSlider").value;
+    const gauss = document.getElementById("gaussCheckbox").checked;
+
+    document.getElementById("scaleValue").textContent = scale;
+    document.getElementById("windowValue").textContent = windowRadius;
+
+    return { scale, windowRadius, gauss };
+}
+// listeners on settings
+document.getElementById("scaleSlider").addEventListener("input", updateSettings);
+document.getElementById("windowSlider").addEventListener("input", updateSettings);
+document.getElementById("gaussCheckbox").addEventListener("change", updateSettings);
+
+let colorRamp = [
+    [0, 0, 255],   
+    [0, 255, 255], 
+    [0, 255, 0],   
+    [255, 255, 0], 
+    [255, 0, 0],
+    [255, 0, 255],
+    [255, 255, 255]
+]
+
+function lerpColor(c1, c2, t) {
+    return c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
+}
+
+function getColorForValue(value, scale = 5.0) {
+    if (!value) { // why the fuck does nan get here sometimes
+        value = 0;
+    }
+    value *= 1.0/scale; // apply user-defined scale
+    value = Math.max(0, Math.min(1, value)); // clamp to [0, 1]
+    const n = colorRamp.length;
+    const scaledValue = value * (n - 1);
+    let idx1 = Math.floor(scaledValue);
+    let idx2 = Math.min(idx1 + 1, n - 1);
+    // clamp idx1 to [0, n-2] to avoid out-of-bounds
+    idx1 = Math.max(0, Math.min(idx1, n - 2));
+    idx2 = Math.max(1, Math.min(idx2, n - 1)); // ensure idx2 is at least 1
+    const t = scaledValue - idx1;
+
+    console.log("value:", value, "scaledValue:", scaledValue, "idx1:", idx1, "idx2:", idx2, "t:", t);
+
+    return lerpColor(colorRamp[idx1], colorRamp[idx2], t);
+}
+
+function blueprintToJson(bpString) {
+    bpString = bpString.trim();
+
+    if (!bpString.startsWith("0")) {
+        throw new Error("Invalid blueprint string: missing '0' prefix");
+    }
+
+    // Base64 decode
+    const binary = atob(bpString.slice(1));
+    const compressed = Uint8Array.from(binary, c => c.charCodeAt(0));
+
+    // Decompress with pako (zlib port)
+    const jsonBytes = window.pako.inflate(compressed);
+
+    return JSON.parse(new TextDecoder().decode(jsonBytes));
+}
+
+let entityData = null;
+fetch('assdata.json')
+    .then(response => response.json())
+    .then(data => {
+        entityData = data;
+        console.log('Entity data loaded:', entityData);
+    })
+    .catch(error => {
+        console.error('Error loading entity data:', error);
+    });
+
+
+
+
+const lastEntityDict = new Map();
+let lastID = 0;
+function getEntityColor(entity) {
+    const name = entity.name;
+    const rotation = entity.direction ?? 0;
+    const key = name + "|" + rotation;
+
+    if (!lastEntityDict.has(key)) {
+        lastEntityDict.set(key, lastID++);
+    }
+    return lastEntityDict.get(key);
+}
+
+function getOccupiedTiles(xCenter, yCenter, width, height) {
+    const x0 = Math.floor(xCenter - width  / 2 + 0.5);
+    const x1 = Math.floor(xCenter + width  / 2 + 0.5);
+    const y0 = Math.floor(yCenter - height / 2 + 0.5);
+    const y1 = Math.floor(yCenter + height / 2 + 0.5);
+
+    const tiles = [];
+    for (let i = x0; i < x1; i++) {
+        for (let j = y0; j < y1; j++) {
+            tiles.push([i, j]);
+        }
+    }
+    return tiles;
+}
+
+function jsonToGrid(bpJson){
+
+    const entities = bpJson.blueprint.entities;
+
+    const mostLeft   = Math.min(...entities.map(e => e.position.x));
+    const mostRight  = Math.max(...entities.map(e => e.position.x));
+    const mostTop    = Math.min(...entities.map(e => e.position.y));
+    const mostBottom = Math.max(...entities.map(e => e.position.y));
+
+    const width  = Math.floor(mostRight - mostLeft + 1);
+    const height = Math.floor(mostBottom - mostTop + 1);
+
+    const grid = Array.from({ length: height }, () =>
+        Array.from({ length: width }, () => 0)
+    );
+
+
+    for (const entity of entities) {
+        const name = entity.name;
+        const x = entity.position.x - mostLeft;
+        const y = entity.position.y - mostTop;
+
+        // Lookup footprint
+        const proto = entityData[name];
+        let w = 1, h = 1;
+
+        if (proto && proto.collision_box) {
+            const bbox = proto.collision_box;
+            w = Math.ceil(bbox[1][0] - bbox[0][0]);
+            h = Math.ceil(bbox[1][1] - bbox[0][1]);
+        }
+
+        const rot = entity.direction ?? 0;
+        if (rot === 4 || rot === 12) {
+            [w, h] = [h, w];
+        }
+
+        for (const [tx, ty] of getOccupiedTiles(x, y, w, h)) {
+            const gx = Math.floor(tx);
+            const gy = Math.floor(ty);
+            if (gx >= 0 && gx < width && gy >= 0 && gy < height) {
+                grid[gy][gx] = getEntityColor(entity);
+            }
+        }
+    }
+
+    return grid;
+}
+
+function gaussianWeight(dx, dy, sigma) {
+    return Math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma));
+}
+
+function waitForNextFrame() {
+    return new Promise(resolve => requestAnimationFrame(resolve));
+}
+
+async function shannonEntropyMap(grid, windowRadius = 10, gauss = true, scale = 5.0) {
+    console.log("starting entropy map computation with gauss =", gauss);
+
+    const h = grid.length;
+    const w = grid[0].length;
+    // set canvas size to w, h, the rendering size, not the element size
+    const canvas = document.getElementById("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    const maxEntropy = 1.0;
+
+    const result = Array.from({ length: h }, () =>
+        Array.from({ length: w }, () => 0)
+    );
+    const rowsPerFrame = Math.max(1, Math.floor(2000 / Math.max(w, 1)));
+
+    for (let y = 0; y < h; y++) {
+        console.log("processing row", y, "/", h);
+        for (let x = 0; x < w; x++) {
+
+            const y0 = Math.max(0, y - windowRadius);
+            const y1 = Math.min(h, y + windowRadius);
+            const x0 = Math.max(0, x - windowRadius);
+            const x1 = Math.min(w, x + windowRadius);
+
+            const counts = new Map();
+            let total = 0;
+
+            for (let yy = y0; yy < y1; yy++) {
+                for (let xx = x0; xx < x1; xx++) {
+                    const s = grid[yy][xx];
+
+                    const dx = xx - x;
+                    const dy = yy - y;
+                    const weight = gauss
+                        ? gaussianWeight(dx, dy, windowRadius / 2)
+                        : 1.0;
+
+                    counts.set(s, (counts.get(s) || 0) + weight);
+                    total += weight;
+                }
+            }
+
+            let H = 0.0;
+            for (const weight of counts.values()) {
+                const p = weight / total;
+                H -= p * Math.log2(p);
+            }
+
+            result[y][x] = H / maxEntropy;
+            // set canvas pixel color based on entropy
+            const color = getColorForValue(result[y][x], scale);
+            ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+            ctx.fillRect(x, y, 1, 1);
+        }
+        await waitForNextFrame();
+    }
+
+    return result;
+}
+
+async function process() {
+    const bpString = document.getElementById("bpInput").value;
+    const button = document.getElementById("processBtn");
+    try {
+        button.disabled = true;
+        const bpJson = blueprintToJson(bpString);
+        const grid = jsonToGrid(bpJson);
+        const { scale, windowRadius, gauss } = updateSettings();
+        await shannonEntropyMap(grid, windowRadius, gauss, scale);
+
+        // show download link
+        const canvas = document.getElementById("canvas");
+        const link = document.getElementById("download_link");
+        link.href = canvas.toDataURL();
+        link.style.display = "inline";
+    } catch (e) {
+        alert("Error processing blueprint: " + e.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+</script>
