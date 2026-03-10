@@ -334,7 +334,8 @@ function lerpColor(c1, c2, t) {
 
 function getColorForValue(value, scale = 5.0) {
     if (!value) { // why the fuck does nan get here sometimes
-        value = 0;
+        throw new Error("nan, wtf");
+        
     }
     value *= 1.0/scale; // apply user-defined scale
     value = Math.max(0, Math.min(1, value)); // clamp to [0, 1]
@@ -347,7 +348,6 @@ function getColorForValue(value, scale = 5.0) {
     idx2 = Math.max(1, Math.min(idx2, n - 1)); // ensure idx2 is at least 1
     const t = scaledValue - idx1;
 
-    console.log("value:", value, "scaledValue:", scaledValue, "idx1:", idx1, "idx2:", idx2, "t:", t);
 
     return lerpColor(colorRamp[idx1], colorRamp[idx2], t);
 }
@@ -495,7 +495,7 @@ async function shannonEntropyMap(grid, windowRadius = 10, gauss = true, scale = 
             const x1 = Math.min(w, x + windowRadius);
 
             const counts = new Map();
-            let total = 0;
+            let total = 0.0001;
 
             for (let yy = y0; yy < y1; yy++) {
                 for (let xx = x0; xx < x1; xx++) {
@@ -511,10 +511,14 @@ async function shannonEntropyMap(grid, windowRadius = 10, gauss = true, scale = 
                     total += weight;
                 }
             }
+            
 
             let H = 0.0;
             for (const weight of counts.values()) {
                 const p = weight / total;
+                if (p <= 0) {
+                    continue;
+                }
                 H -= p * Math.log2(p);
             }
 
